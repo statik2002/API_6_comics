@@ -23,6 +23,7 @@ def main():
 
     load_dotenv()
     vk_id = os.environ['VK_ID']
+    vk_group_id = os.environ['VK_GROUP_ID']
     vk_user_id = os.environ['VK_USER_ID']
     vk_token = os.environ['VK_TOKEN']
 
@@ -39,8 +40,11 @@ def main():
     print(comics_description['alt'])
     load_comics_image(comics_description['img'], destination_folder)
 
-    url_vk = 'https://api.vk.com/method/groups.get'
+    url_vk = 'https://api.vk.com/method/'
 
+
+
+    """
     params = {
         'access_token': vk_token,
         'v': 5.131,
@@ -48,6 +52,17 @@ def main():
     }
 
     response = requests.get(url_vk, params=params)
+    response.raise_for_status()
+    pprint(response.json())
+    """
+    method_photos_getwalluploadserver = 'photos.getWallUploadServer'
+    params = {
+        'access_token': vk_token,
+        'v': 5.131,
+        'extended': 1,
+        'group_id': vk_group_id,
+    }
+    response = requests.get(f'{url_vk}{method_photos_getwalluploadserver}', params=params)
     response.raise_for_status()
     pprint(response.json())
 
