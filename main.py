@@ -53,24 +53,15 @@ def get_groups(url, vk_token, v=5.131, extended=1):
     return response.json()
 
 
-def save_wall_photo(url, user_id, group_id, path, server, vk_token):
-
-    hash_res = ''
-
-    params = {
-        'user_id': user_id,
-        'group_id': group_id,
-        'server': server,
-        'access_token': vk_token,
-        'v': 5.131,
-        'hash': hash_res,
-    }
+def save_wall_photo(path, server):
 
     with open(path, 'rb') as photo:
         files = {
-            'multipart/form-data': photo,
+            'Content-Type': 'multipart/form-data',
+            'photo': photo
         }
-        response = requests.post(f'{url}photos.saveWallPhoto', files=files, params=params)
+
+        response = requests.post(server, files=files)
         response.raise_for_status()
 
     return response.json()
@@ -105,12 +96,8 @@ def main():
     #print(os.path.abspath(comics_image_path))
 
     upload_photo_response = save_wall_photo(
-        url_vk,
-        upload_server['response']['user_id'],
-        vk_group_id,
         os.path.abspath(comics_image_path),
         upload_server['response']['upload_url'],
-        vk_token
     )
     print(upload_photo_response)
 
