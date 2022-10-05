@@ -1,8 +1,7 @@
 import os
 import pathlib
-from pathlib import Path
-from pprint import pprint
 import random
+import time
 from urllib.parse import urlsplit
 from dotenv import load_dotenv
 import requests
@@ -15,9 +14,11 @@ def get_comics_url_and_title():
 
     url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
+    connection_timeout = 60
+
     while True:
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=connection_timeout)
             response.raise_for_status()
             comics_info = response.json()
             return comics_info['img'], comics_info['alt']
@@ -25,6 +26,11 @@ def get_comics_url_and_title():
         except requests.exceptions.HTTPError:
             comics_index = random.randint(0, 999)
             url = fr'https://xkcd.com/{comics_index}/info.0.json'
+
+        except requests.exceptions.ConnectionError:
+            connection_timeout += 5
+            time.sleep(2)
+            continue
 
 
 def load_comics_image(url):
@@ -138,12 +144,8 @@ def post_photo_on_wall(vk_group_id, title, photo_owner_id, photo_id, vk_token, v
 def main():
 
     load_dotenv()
-    vk_id = os.environ['VK_ID']
     vk_group_id = os.environ['VK_GROUP_ID']
-    vk_user_id = os.environ['VK_USER_ID']
     vk_token = os.environ['VK_TOKEN']
-
-    url = 'https://xkcd.com/info.0.json'
 
     comics_url, comics_title = get_comics_url_and_title()
     comics_image_path = load_comics_image(comics_url)
@@ -160,7 +162,7 @@ def main():
     saved_owner_id, saved_photo_id = save_wall_photo(server_id, photo, photo_hash, vk_token, vk_group_id)
 
     # Опубликовали фото
-    comics_post_response = post_photo_on_wall(vk_group_id, comics_title, saved_owner_id, saved_photo_id, vk_token)
+    post_photo_on_wall(vk_group_id, comics_title, saved_owner_id, saved_photo_id, vk_token)
 
     # Удалили картинку
     pathlib.Path(comics_image_path).unlink(missing_ok=True)
