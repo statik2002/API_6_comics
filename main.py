@@ -35,95 +35,145 @@ def get_comics_url_and_title():
 
 def load_comics_image(url):
 
-    response = requests.get(url)
-    response.raise_for_status()
+    connection_timeout = 60
 
-    file_path = urlsplit(url)[2].split('/')[2]
+    while True:
+        try:
+            response = requests.get(url, timeout=connection_timeout)
+            response.raise_for_status()
 
-    with open(file_path, 'wb') as file:
-        file.write(response.content)
+            file_path = urlsplit(url)[2].split('/')[2]
 
-    return file_path
+            with open(file_path, 'wb') as file:
+                file.write(response.content)
+
+            return file_path
+
+        except requests.exceptions.HTTPError:
+            print('Ошибка при скачивании комикса')
+            return None
+
+        except requests.exceptions.ConnectionError:
+            connection_timeout += 5
+            time.sleep(2)
+            continue
 
 
-def get_wall_upload_server(url, group_id, vk_token, v=5.131):
+def get_wall_upload_server_url(url, group_id, vk_token, v=5.131):
+
+    connection_timeout = 60
     method_photos_get_wall_upload_server = 'photos.getWallUploadServer'
     params = {
         'access_token': vk_token,
         'group_id': group_id,
         'v': v,
     }
-    response = requests.get(f'{url}{method_photos_get_wall_upload_server}', params=params)
-    response.raise_for_status()
-    return response.json()['response']['upload_url']
 
+    while True:
+        try:
+            response = requests.get(
+                f'{url}{method_photos_get_wall_upload_server}',
+                params=params,
+                timeout=connection_timeout
+            )
+            response.raise_for_status()
+            return response.json()['response']['upload_url']
 
-def get_groups(url, vk_token, v=5.131, extended=1):
-    method = 'groups.get'
-    params = {
-        'access_token': vk_token,
-        'v': v,
-        'extended': extended
-    }
+        except requests.exceptions.HTTPError:
+            print('Ошибка запроса получения адреса сервера')
+            return None
 
-    response = requests.get(f'{url}{method}', params=params)
-    response.raise_for_status()
-
-    return response.json()
-
-
-def get_wall(vk_token, owner_id, v=5.131):
-
-    params = {
-        'access_token': vk_token,
-        'v': v,
-        'owner_id': -owner_id,
-        'filter': 'owner'
-    }
-
-    response = requests.get('https://api.vk.com/method/wall.get', params=params)
-    response.raise_for_status()
-
-    return response.json()
+        except requests.exceptions.ConnectionError:
+            connection_timeout += 5
+            time.sleep(5)
+            continue
 
 
 def upload_photo_on_wall(path, server_url):
 
-    with open(path, 'rb') as photo:
-        files = {
-            'Content-Type': 'multipart/form-data',
-            'photo': photo
-        }
+    connection_timeout = 60
 
-        response = requests.post(server_url, files=files)
-        response.raise_for_status()
+    try:
+        with open(path, 'rb') as photo:
+            files = {
+                'Content-Type': 'multipart/form-data',
+                'photo': photo
+            }
 
-        upload_response = response.json()
+            while True:
+                try:
+                    response = requests.post(
+                        server_url,
+                        files=files,
+                        timeout=connection_timeout
+                    )
+                    response.raise_for_status()
 
-        return upload_response['server'], upload_response['photo'], upload_response['hash']
+                    upload_response = response.json()
+
+                    return (
+                        upload_response['server'],
+                        upload_response['photo'],
+                        upload_response['hash']
+                    )
+
+                except requests.exceptions.HTTPError:
+                    print('Ошибка при загрузке изображения')
+                    return None
+
+                except requests.exceptions.ConnectionError:
+                    connection_timeout += 5
+                    time.sleep(5)
+                    continue
+
+    except FileNotFoundError:
+        print(f'Файл {path} не найден!')
+        return
 
 
-def save_wall_photo(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
+def save_to_wall_photo(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
+    connection_timeout = 60
 
-        params = {
-            'server': server_id,
-            'photo': photo,
-            'hash': photo_hash,
-            'access_token': vk_token,
-            'group_id': group_id,
-            'v': v,
-        }
+    params = {
+        'server': server_id,
+        'photo': photo,
+        'hash': photo_hash,
+        'access_token': vk_token,
+        'group_id': group_id,
+        'v': v,
+    }
 
-        response = requests.post('https://api.vk.com/method/photos.saveWallPhoto', params=params)
-        response.raise_for_status()
+    while True:
+        try:
+            response = requests.post(
+                'https://api.vk.com/method/photos.saveWallPhoto',
+                params=params,
+                timeout=connection_timeout
+            )
+            response.raise_for_status()
 
-        save_photo_response = response.json()
+            save_photo_response = response.json()
 
-        return save_photo_response['response'][0]['owner_id'], save_photo_response['response'][0]['id']
+            return (
+                save_photo_response['response'][0]['owner_id'],
+                save_photo_response['response'][0]['id']
+            )
+
+        except requests.exceptions.HTTPError:
+            print('Ошибка при сохранении изображения')
+            return None
+
+        except requests.exceptions.ConnectionError:
+            connection_timeout += 5
+            time.sleep(5)
+            continue
 
 
-def post_photo_on_wall(vk_group_id, title, photo_owner_id, photo_id, vk_token, v=5.131):
+def post_photo_on_wall(vk_group_id, title, photo_owner_id,
+                       photo_id, vk_token, v=5.131
+                       ):
 
+    connection_timeout = 60
     params = {
         'v': v,
         'access_token': vk_token,
@@ -135,10 +185,25 @@ def post_photo_on_wall(vk_group_id, title, photo_owner_id, photo_id, vk_token, v
         }
     }
 
-    response = requests.post('https://api.vk.com/method/wall.post', params=params)
-    response.raise_for_status()
+    while True:
+        try:
+            response = requests.post(
+                'https://api.vk.com/method/wall.post',
+                params=params,
+                timeout=connection_timeout
+            )
+            response.raise_for_status()
 
-    return response.json()
+            return response.json()
+
+        except requests.exceptions.HTTPError:
+            print('Ошибка при публикации комикса')
+            return None
+
+        except requests.exceptions.ConnectionError:
+            connection_timeout += 5
+            time.sleep(5)
+            continue
 
 
 def main():
@@ -146,23 +211,45 @@ def main():
     load_dotenv()
     vk_group_id = os.environ['VK_GROUP_ID']
     vk_token = os.environ['VK_TOKEN']
+    vk_url = 'https://api.vk.com/method/'
 
     comics_url, comics_title = get_comics_url_and_title()
+
     comics_image_path = load_comics_image(comics_url)
+    if not comics_image_path:
+        return
 
-    url_vk = 'https://api.vk.com/method/'
+    upload_server_url = get_wall_upload_server_url(
+        vk_url,
+        vk_group_id,
+        vk_token
+    )
+    if not upload_server_url:
+        return
 
-    # Получили ссылку для загрузки на сервер
-    upload_server_url = get_wall_upload_server(url_vk, vk_group_id, vk_token)
+    server_id, photo, photo_hash = upload_photo_on_wall(
+        os.path.abspath(comics_image_path),
+        upload_server_url
+    )
+    if not server_id:
+        return
 
-    # Загрузили фото на стену
-    server_id, photo, photo_hash = upload_photo_on_wall(os.path.abspath(comics_image_path), upload_server_url)
+    saved_owner_id, saved_photo_id = save_to_wall_photo(
+        server_id, photo,
+        photo_hash,
+        vk_token,
+        vk_group_id
+    )
+    if not saved_owner_id:
+        return
 
-    # Сохранили фото на стене
-    saved_owner_id, saved_photo_id = save_wall_photo(server_id, photo, photo_hash, vk_token, vk_group_id)
-
-    # Опубликовали фото
-    post_photo_on_wall(vk_group_id, comics_title, saved_owner_id, saved_photo_id, vk_token)
+    post_photo_on_wall(
+        vk_group_id,
+        comics_title,
+        saved_owner_id,
+        saved_photo_id,
+        vk_token
+    )
 
     # Удалили картинку
     pathlib.Path(comics_image_path).unlink(missing_ok=True)
