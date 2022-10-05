@@ -27,15 +27,14 @@ def load_comics_image(url, folder):
     return filepath
 
 
-def getwalluploadserver(url, vk_group_id, vk_token, v=5.131, extended=1):
-    method_photos_getwalluploadserver = 'photos.getWallUploadServer'
+def get_wall_upload_server(url, group_id, vk_token, v=5.131):
+    method_photos_get_wall_upload_server = 'photos.getWallUploadServer'
     params = {
         'access_token': vk_token,
+        'group_id': group_id,
         'v': v,
-        'extended': extended,
-        'group_id': vk_group_id,
     }
-    response = requests.get(f'{url}{method_photos_getwalluploadserver}', params=params)
+    response = requests.get(f'{url}{method_photos_get_wall_upload_server}', params=params)
     response.raise_for_status()
     return response.json()
 
@@ -54,15 +53,17 @@ def get_groups(url, vk_token, v=5.131, extended=1):
     return response.json()
 
 
-def upload_image_at_wall(url, vk_token, vk_user_id, vk_group_id, path, upload_server):
+def save_wall_photo(url, user_id, group_id, path, server, vk_token):
 
-    print(f'{url}photos.saveWallPhoto')
+    hash_res = ''
 
     params = {
-            'user_id': vk_user_id,
-            'group_id': vk_group_id,
-            'server': upload_server,
-            'access_token': vk_token,
+        'user_id': user_id,
+        'group_id': group_id,
+        'server': server,
+        'access_token': vk_token,
+        'v': 5.131,
+        'hash': hash_res,
     }
 
     with open(path, 'rb') as photo:
@@ -97,18 +98,19 @@ def main():
     #get_all_groups = get_groups(url_vk, vk_token)
     #pprint(get_all_groups)
 
-    upload_server = getwalluploadserver(url_vk, vk_group_id, vk_token)
+    upload_server = get_wall_upload_server(url_vk, vk_group_id, vk_token)
     pprint(upload_server)
+
 
     #print(os.path.abspath(comics_image_path))
 
-    upload_photo_response = upload_image_at_wall(
+    upload_photo_response = save_wall_photo(
         url_vk,
-        vk_token,
         upload_server['response']['user_id'],
         vk_group_id,
         os.path.abspath(comics_image_path),
-        upload_server['response']['upload_url']
+        upload_server['response']['upload_url'],
+        vk_token
     )
     print(upload_photo_response)
 
