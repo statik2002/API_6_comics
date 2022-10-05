@@ -53,7 +53,7 @@ def get_groups(url, vk_token, v=5.131, extended=1):
     return response.json()
 
 
-def save_wall_photo(path, server):
+def save_wall_photo(path, server, vk_token, group_id, v=5.131):
 
     with open(path, 'rb') as photo:
         files = {
@@ -63,6 +63,23 @@ def save_wall_photo(path, server):
 
         response = requests.post(server, files=files)
         response.raise_for_status()
+
+        res2=response.json()
+        pprint(res2)
+
+        params = {
+            'server': res2['server'],
+            'photo': res2['photo'],
+            'hash': res2['hash'],
+            'access_token': vk_token,
+            'group_id': group_id,
+            'v': v,
+        }
+
+        response = requests.post('https://api.vk.com/method/photos.saveWallPhoto', params=params)
+        response.raise_for_status()
+
+        pprint(response.json())
 
     return response.json()
 
@@ -90,7 +107,7 @@ def main():
     #pprint(get_all_groups)
 
     upload_server = get_wall_upload_server(url_vk, vk_group_id, vk_token)
-    pprint(upload_server)
+    #pprint(upload_server)
 
 
     #print(os.path.abspath(comics_image_path))
@@ -98,8 +115,10 @@ def main():
     upload_photo_response = save_wall_photo(
         os.path.abspath(comics_image_path),
         upload_server['response']['upload_url'],
+        vk_token,
+        vk_group_id
     )
-    print(upload_photo_response)
+    #print(upload_photo_response)
 
 
 if __name__ == '__main__':
