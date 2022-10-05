@@ -1,19 +1,29 @@
 import os
 from pathlib import Path
 from pprint import pprint
+import random
 from urllib.parse import urlsplit
 from dotenv import load_dotenv
 import requests
 
 
-def get_comics_url_and_title(url):
+def get_comics_url_and_title():
 
-    response = requests.get(url)
-    response.raise_for_status()
+    random.seed()
+    comics_index = random.randint(0, 999)
 
-    comics_info = response.json()
+    url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
-    return comics_info['img'], comics_info['alt']
+    while True:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            comics_info = response.json()
+            return comics_info['img'], comics_info['alt']
+
+        except requests.exceptions.HTTPError:
+            comics_index = random.randint(0, 999)
+            url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
 
 def load_comics_image(url, folder):
@@ -134,7 +144,7 @@ def main():
 
     url = 'https://xkcd.com/info.0.json'
 
-    comics_url, comics_title = get_comics_url_and_title('https://xkcd.com/info.0.json')
+    comics_url, comics_title = get_comics_url_and_title()
     destination_folder = 'Comics'
     Path(destination_folder).mkdir(exist_ok=True)
     comics_image_path = load_comics_image(comics_url, destination_folder)
