@@ -1,4 +1,5 @@
 import os
+import pathlib
 from pathlib import Path
 from pprint import pprint
 import random
@@ -26,17 +27,17 @@ def get_comics_url_and_title():
             url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
 
-def load_comics_image(url, folder):
+def load_comics_image(url):
 
     response = requests.get(url)
     response.raise_for_status()
 
-    filepath = Path(folder).joinpath(urlsplit(url)[2].split('/')[2])
+    file_path = urlsplit(url)[2].split('/')[2]
 
-    with open(filepath, 'wb') as file:
+    with open(file_path, 'wb') as file:
         file.write(response.content)
 
-    return filepath
+    return file_path
 
 
 def get_wall_upload_server(url, group_id, vk_token, v=5.131):
@@ -145,9 +146,7 @@ def main():
     url = 'https://xkcd.com/info.0.json'
 
     comics_url, comics_title = get_comics_url_and_title()
-    destination_folder = 'Comics'
-    Path(destination_folder).mkdir(exist_ok=True)
-    comics_image_path = load_comics_image(comics_url, destination_folder)
+    comics_image_path = load_comics_image(comics_url)
 
     url_vk = 'https://api.vk.com/method/'
 
@@ -161,8 +160,10 @@ def main():
     saved_owner_id, saved_photo_id = save_wall_photo(server_id, photo, photo_hash, vk_token, vk_group_id)
 
     # Опубликовали фото
-    res2 = post_photo_on_wall(vk_group_id, comics_title, saved_owner_id, saved_photo_id, vk_token)
-    #pprint(res2)
+    comics_post_response = post_photo_on_wall(vk_group_id, comics_title, saved_owner_id, saved_photo_id, vk_token)
+
+    # Удалили картинку
+    pathlib.Path(comics_image_path).unlink(missing_ok=True)
 
 
 if __name__ == '__main__':
