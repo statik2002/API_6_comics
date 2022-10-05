@@ -210,7 +210,7 @@ def main():
 
     load_dotenv()
     vk_group_id = os.environ['VK_GROUP_ID']
-    vk_token = os.environ['VK_TOKEN']
+    vk_token = os.environ['VK_GROUP_ID']
     vk_url = 'https://api.vk.com/method/'
 
     comics_url, comics_title = get_comics_url_and_title()
@@ -251,7 +251,6 @@ def main():
         vk_token
     )
 
-    # Удалили картинку
     pathlib.Path(comics_image_path).unlink(missing_ok=True)
 
 
