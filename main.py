@@ -133,6 +133,8 @@ def main():
     vk_group_id = os.environ['VK_GROUP_ID']
     vk_token = os.environ['VK_TOKEN']
 
+    comics_image_path = None
+
     try:
         comics_url, comics_title = get_comics_url_and_title()
 
@@ -171,10 +173,11 @@ def main():
             vk_token
         )
 
-        pathlib.Path(comics_image_path).unlink(missing_ok=True)
-
     except requests.exceptions.HTTPError:
         print('Ошибка запроса')
+
+    finally:
+        pathlib.Path(comics_image_path).unlink(missing_ok=True)
 
 
 if __name__ == '__main__':
