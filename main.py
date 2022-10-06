@@ -1,8 +1,8 @@
 import os
 import pathlib
 import random
-import time
-from urllib.parse import urlsplit
+import urllib.parse
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 import requests
 
@@ -30,12 +30,13 @@ def load_comics_image(url):
     response = requests.get(url)
     response.raise_for_status()
 
-    file_path = urlsplit(url)[2].split('/')[2]
+    file_path = urllib.parse.unquote(urlparse(url).path)
+    path, file_name = os.path.split(file_path)
 
-    with open(file_path, 'wb') as file:
+    with open(file_name, 'wb') as file:
         file.write(response.content)
 
-    return file_path
+    return file_name
 
 
 def get_wall_upload_server_url(group_id, vk_token, v=5.131):
@@ -78,7 +79,9 @@ def upload_photo_on_wall(path, server_url):
         )
 
 
-def save_photo_to_wall(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
+def save_photo_to_wall(server_id, photo, photo_hash,
+                       vk_token, group_id, v=5.131
+                       ):
 
     params = {
         'server': server_id,
