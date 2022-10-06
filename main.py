@@ -62,7 +62,7 @@ def load_comics_image(url):
 def get_wall_upload_server_url(url, group_id, vk_token, v=5.131):
 
     connection_timeout = 60
-    method_photos_get_wall_upload_server = 'photos.getWallUploadServer'
+    method_wall_upload_server = 'photos.getWallUploadServer'
     params = {
         'access_token': vk_token,
         'group_id': group_id,
@@ -72,7 +72,7 @@ def get_wall_upload_server_url(url, group_id, vk_token, v=5.131):
     while True:
         try:
             response = requests.get(
-                f'{url}{method_photos_get_wall_upload_server}',
+                f'{url}{method_wall_upload_server}',
                 params=params,
                 timeout=connection_timeout
             )
@@ -131,7 +131,7 @@ def upload_photo_on_wall(path, server_url):
         return
 
 
-def save_to_wall_photo(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
+def save_photo_to_wall(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
     connection_timeout = 60
 
     params = {
@@ -210,7 +210,7 @@ def main():
 
     load_dotenv()
     vk_group_id = os.environ['VK_GROUP_ID']
-    vk_token = os.environ['VK_GROUP_ID']
+    vk_token = os.environ['VK_TOKEN']
     vk_url = 'https://api.vk.com/method/'
 
     comics_url, comics_title = get_comics_url_and_title()
@@ -234,7 +234,7 @@ def main():
     if not server_id:
         return
 
-    saved_owner_id, saved_photo_id = save_to_wall_photo(
+    saved_owner_id, saved_photo_id = save_photo_to_wall(
         server_id, photo,
         photo_hash,
         vk_token,
