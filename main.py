@@ -9,8 +9,13 @@ import requests
 
 def get_comics_url_and_title():
 
+    url = 'https://xkcd.com/info.0.json'
+    response = requests.get(url)
+    response.raise_for_status()
+    max_comics_count = response.json()['num']
+
     random.seed()
-    comics_index = random.randint(0, 999)
+    comics_index = random.randint(0, max_comics_count)
 
     url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
