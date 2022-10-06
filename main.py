@@ -59,10 +59,10 @@ def load_comics_image(url):
             continue
 
 
-def get_wall_upload_server_url(url, group_id, vk_token, v=5.131):
+def get_wall_upload_server_url(group_id, vk_token, v=5.131):
 
     connection_timeout = 60
-    method_wall_upload_server = 'photos.getWallUploadServer'
+    url_method_wall_upload_server = 'https://api.vk.com/method/photos.getWallUploadServer'
     params = {
         'access_token': vk_token,
         'group_id': group_id,
@@ -72,7 +72,7 @@ def get_wall_upload_server_url(url, group_id, vk_token, v=5.131):
     while True:
         try:
             response = requests.get(
-                f'{url}{method_wall_upload_server}',
+                url_method_wall_upload_server,
                 params=params,
                 timeout=connection_timeout
             )
@@ -220,7 +220,6 @@ def main():
         return
 
     upload_server_url = get_wall_upload_server_url(
-        vk_url,
         vk_group_id,
         vk_token
     )
