@@ -14,33 +14,23 @@ def get_comics_url_and_title():
 
     url = fr'https://xkcd.com/{comics_index}/info.0.json'
 
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        comics_info = response.json()
-        return comics_info['img'], comics_info['alt']
-
-    except requests.exceptions.HTTPError:
-        comics_index = random.randint(0, 999)
-        url = fr'https://xkcd.com/{comics_index}/info.0.json'
+    response = requests.get(url)
+    response.raise_for_status()
+    comics_info = response.json()
+    return comics_info['img'], comics_info['alt']
 
 
 def load_comics_image(url):
 
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
+    response = requests.get(url)
+    response.raise_for_status()
 
-        file_path = urlsplit(url)[2].split('/')[2]
+    file_path = urlsplit(url)[2].split('/')[2]
 
-        with open(file_path, 'wb') as file:
-            file.write(response.content)
+    with open(file_path, 'wb') as file:
+        file.write(response.content)
 
-        return file_path
-
-    except requests.exceptions.HTTPError:
-        print('Ошибка при скачивании комикса')
-        return None
+    return file_path
 
 
 def get_wall_upload_server_url(group_id, vk_token, v=5.131):
@@ -52,50 +42,35 @@ def get_wall_upload_server_url(group_id, vk_token, v=5.131):
         'v': v,
     }
 
-    try:
-        response = requests.get(
-            url_method_wall_upload_server,
-            params=params,
-        )
-        response.raise_for_status()
-        return response.json()['response']['upload_url']
-
-    except requests.exceptions.HTTPError:
-        print('Ошибка запроса получения адреса сервера')
-        return None
+    response = requests.get(
+        url_method_wall_upload_server,
+        params=params,
+    )
+    response.raise_for_status()
+    return response.json()['response']['upload_url']
 
 
 def upload_photo_on_wall(path, server_url):
 
-    try:
-        with open(path, 'rb') as photo:
-            files = {
-                'Content-Type': 'multipart/form-data',
-                'photo': photo
-            }
+    with open(path, 'rb') as photo:
+        files = {
+            'Content-Type': 'multipart/form-data',
+            'photo': photo
+        }
 
-        try:
-            response = requests.post(
-                server_url,
-                files=files,
-            )
-            response.raise_for_status()
+        response = requests.post(
+            server_url,
+            files=files,
+        )
+        response.raise_for_status()
 
-            upload_response = response.json()
+        upload_response = response.json()
 
-            return (
-                upload_response['server'],
-                upload_response['photo'],
-                upload_response['hash']
-            )
-
-        except requests.exceptions.HTTPError:
-            print('Ошибка при загрузке изображения')
-            return None
-
-    except FileNotFoundError:
-        print(f'Файл {path} не найден!')
-        return
+        return (
+            upload_response['server'],
+            upload_response['photo'],
+            upload_response['hash']
+        )
 
 
 def save_photo_to_wall(server_id, photo, photo_hash, vk_token, group_id, v=5.131):
@@ -109,23 +84,18 @@ def save_photo_to_wall(server_id, photo, photo_hash, vk_token, group_id, v=5.131
         'v': v,
     }
 
-    try:
-        response = requests.post(
-            'https://api.vk.com/method/photos.saveWallPhoto',
-            params=params,
-        )
-        response.raise_for_status()
+    response = requests.post(
+        'https://api.vk.com/method/photos.saveWallPhoto',
+        params=params,
+    )
+    response.raise_for_status()
 
-        save_photo_response = response.json()
+    save_photo_response = response.json()
 
-        return (
-            save_photo_response['response'][0]['owner_id'],
-            save_photo_response['response'][0]['id']
-        )
-
-    except requests.exceptions.HTTPError:
-        print('Ошибка при сохранении изображения')
-        return None
+    return (
+        save_photo_response['response'][0]['owner_id'],
+        save_photo_response['response'][0]['id']
+    )
 
 
 def post_photo_on_wall(vk_group_id, title, photo_owner_id,
@@ -143,18 +113,13 @@ def post_photo_on_wall(vk_group_id, title, photo_owner_id,
         }
     }
 
-    try:
-        response = requests.post(
-            'https://api.vk.com/method/wall.post',
-            params=params,
-        )
-        response.raise_for_status()
+    response = requests.post(
+        'https://api.vk.com/method/wall.post',
+        params=params,
+    )
+    response.raise_for_status()
 
-        return response.json()
-
-    except requests.exceptions.HTTPError:
-        print('Ошибка при публикации комикса')
-        return None
+    return response.json()
 
 
 def main():
@@ -162,46 +127,49 @@ def main():
     load_dotenv()
     vk_group_id = os.environ['VK_GROUP_ID']
     vk_token = os.environ['VK_TOKEN']
-    vk_url = 'https://api.vk.com/method/'
 
-    comics_url, comics_title = get_comics_url_and_title()
+    try:
+        comics_url, comics_title = get_comics_url_and_title()
 
-    comics_image_path = load_comics_image(comics_url)
-    if not comics_image_path:
-        return
+        comics_image_path = load_comics_image(comics_url)
+        if not comics_image_path:
+            return
 
-    upload_server_url = get_wall_upload_server_url(
-        vk_group_id,
-        vk_token
-    )
-    if not upload_server_url:
-        return
+        upload_server_url = get_wall_upload_server_url(
+            vk_group_id,
+            vk_token
+        )
+        if not upload_server_url:
+            return
 
-    server_id, photo, photo_hash = upload_photo_on_wall(
-        os.path.abspath(comics_image_path),
-        upload_server_url
-    )
-    if not server_id:
-        return
+        server_id, photo, photo_hash = upload_photo_on_wall(
+            os.path.abspath(comics_image_path),
+            upload_server_url
+        )
+        if not server_id:
+            return
 
-    saved_owner_id, saved_photo_id = save_photo_to_wall(
-        server_id, photo,
-        photo_hash,
-        vk_token,
-        vk_group_id
-    )
-    if not saved_owner_id:
-        return
+        saved_owner_id, saved_photo_id = save_photo_to_wall(
+            server_id, photo,
+            photo_hash,
+            vk_token,
+            vk_group_id
+        )
+        if not saved_owner_id:
+            return
 
-    post_photo_on_wall(
-        vk_group_id,
-        comics_title,
-        saved_owner_id,
-        saved_photo_id,
-        vk_token
-    )
+        post_photo_on_wall(
+            vk_group_id,
+            comics_title,
+            saved_owner_id,
+            saved_photo_id,
+            vk_token
+        )
 
-    pathlib.Path(comics_image_path).unlink(missing_ok=True)
+        pathlib.Path(comics_image_path).unlink(missing_ok=True)
+
+    except requests.exceptions.HTTPError:
+        print('Ошибка запроса')
 
 
 if __name__ == '__main__':
