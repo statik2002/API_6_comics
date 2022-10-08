@@ -2,9 +2,14 @@ import os
 import pathlib
 import random
 import urllib.parse
+from pprint import pprint
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 import requests
+
+
+class VkErrors(Exception):
+    ...
 
 
 def get_comics_url_and_title():
@@ -25,7 +30,7 @@ def get_comics_url_and_title():
     return comics_info['img'], comics_info['alt']
 
 
-def load_comics_image(url):
+def download_comics_image(url):
 
     response = requests.get(url)
     response.raise_for_status()
@@ -41,7 +46,7 @@ def load_comics_image(url):
 
 def get_wall_upload_server_url(group_id, vk_token, v=5.131):
 
-    url_method_wall_upload_server = 'https://api.vk.com/method/photos.getWallUploadServer'
+    url_method = 'https://api.vk.com/method/photos.getWallUploadServer'
     params = {
         'access_token': vk_token,
         'group_id': group_id,
@@ -49,11 +54,19 @@ def get_wall_upload_server_url(group_id, vk_token, v=5.131):
     }
 
     response = requests.get(
-        url_method_wall_upload_server,
+        url_method,
         params=params,
     )
-    response.raise_for_status()
-    return response.json()['response']['upload_url']
+
+    response_message = response.json()
+
+    try:
+        upload_url = response_message['response']['upload_url']
+
+        return upload_url
+
+    except KeyError:
+        raise VkErrors(response_message['error']['error_msg'])
 
 
 def upload_photo_on_wall(path, server_url):
@@ -68,15 +81,18 @@ def upload_photo_on_wall(path, server_url):
             server_url,
             files=files,
         )
-        response.raise_for_status()
 
-        upload_response = response.json()
+    upload_response = response.json()
 
-        return (
-            upload_response['server'],
-            upload_response['photo'],
-            upload_response['hash']
-        )
+    try:
+        upload_server = upload_response['server']
+        upload_photo = upload_response['photo']
+        upload_hash = upload_response['hash']
+
+        return upload_server, upload_photo, upload_hash
+
+    except KeyError:
+        raise VkErrors(upload_response['error']['error_msg'])
 
 
 def save_photo_to_wall(server_id, photo, photo_hash,
@@ -96,14 +112,17 @@ def save_photo_to_wall(server_id, photo, photo_hash,
         'https://api.vk.com/method/photos.saveWallPhoto',
         params=params,
     )
-    response.raise_for_status()
 
     save_photo_response = response.json()
 
-    return (
-        save_photo_response['response'][0]['owner_id'],
-        save_photo_response['response'][0]['id']
-    )
+    try:
+        owner_id = save_photo_response['response'][0]['owner_id']
+        photo_id = save_photo_response['response'][0]['id']
+
+        return owner_id, photo_id
+
+    except KeyError:
+        raise VkErrors(save_photo_response['error']['error_msg'])
 
 
 def post_photo_on_wall(vk_group_id, title, photo_owner_id,
@@ -125,9 +144,12 @@ def post_photo_on_wall(vk_group_id, title, photo_owner_id,
         'https://api.vk.com/method/wall.post',
         params=params,
     )
-    response.raise_for_status()
+    post_photo_response = response.json()
 
-    return response.json()
+    try:
+        return post_photo_response['response']
+    except KeyError:
+        raise VkErrors(post_photo_response['error']['error_msg'])
 
 
 def main():
@@ -136,28 +158,22 @@ def main():
     vk_group_id = os.environ['VK_GROUP_ID']
     vk_token = os.environ['VK_TOKEN']
 
-    comics_image_path = None
-
     try:
         comics_url, comics_title = get_comics_url_and_title()
 
-        comics_image_path = load_comics_image(comics_url)
-        if not comics_image_path:
-            return
+        comics_image_path = download_comics_image(comics_url)
 
         upload_server_url = get_wall_upload_server_url(
             vk_group_id,
             vk_token
         )
-        if not upload_server_url:
-            return
 
         server_id, photo, photo_hash = upload_photo_on_wall(
             os.path.abspath(comics_image_path),
             upload_server_url
         )
-        if not server_id:
-            return
+
+        pathlib.Path(comics_image_path).unlink(missing_ok=True)
 
         saved_owner_id, saved_photo_id = save_photo_to_wall(
             server_id, photo,
@@ -165,8 +181,6 @@ def main():
             vk_token,
             vk_group_id
         )
-        if not saved_owner_id:
-            return
 
         post_photo_on_wall(
             vk_group_id,
@@ -176,11 +190,11 @@ def main():
             vk_token
         )
 
-    except requests.exceptions.HTTPError:
-        print('Ошибка запроса')
+    except requests.exceptions.HTTPError as response_error:
+        print('Ошибка запроса', response_error.errno)
 
-    finally:
-        pathlib.Path(comics_image_path).unlink(missing_ok=True)
+    except VkErrors as error:
+        print('Ошибка в запросе к VK API:', error)
 
 
 if __name__ == '__main__':
